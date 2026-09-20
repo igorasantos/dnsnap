@@ -117,6 +117,13 @@ The exit status is non-zero when no domain could be snapshotted at all; domains 
 ## Install
 
 ```bash
+brew trust --formula igorasantos/tap/dnsnap
+brew install igorasantos/tap/dnsnap
+```
+
+### From source
+
+```bash
 make            # builds dist/dnsnap, a single self-contained script
 make install    # PREFIX=/usr/local by default
 ```
