@@ -31,7 +31,7 @@ discover_names() {
 
             # The whole of _names/, however deep its grouping directories go.
             find "$QUERIED_DIR/$domdir/$NAMES_DIR" -type f -name '*.dns' \
-                 -exec cat {} + 2>/dev/null
+                 ! -name '.*' -exec cat {} + 2>/dev/null
         } | awk '
             # A record line is <owner> <ttl> IN <type> <rdata...>. The owner
             # is taken from all of them, the rdata only from the types whose
@@ -48,7 +48,7 @@ discover_names() {
         # but ";; no records published" keeps being asked about. The path below
         # _names/ is the name with its labels reversed, so dir_domain turns it
         # back into one.
-        find "$QUERIED_DIR/$domdir/$NAMES_DIR" -type f -name '*.dns' 2>/dev/null \
+        find "$QUERIED_DIR/$domdir/$NAMES_DIR" -type f -name '*.dns' ! -name '.*' 2>/dev/null \
             | while read -r name_file; do
                   rel="${name_file#"$QUERIED_DIR/$domdir/$NAMES_DIR/"}"
                   printf '%s.%s\n' "$(dir_domain "${rel%.dns}")" "$domain"
@@ -56,10 +56,11 @@ discover_names() {
 
         # A subdomain snapshotted in its own right: the directory is the name.
         # dnsnap's own directories are pruned: none of them is a domain, and a
-        # subdomain further down has ones of its own.
+        # subdomain further down has ones of its own. Hidden directories are
+        # pruned too: a label cannot start with a dot, so whatever else a repo keeps beside the snapshot are not subdomains.
         find "$QUERIED_DIR/$domdir" -mindepth 1 \
-             \( -name "$NAMES_DIR" -o -name "$APEX_DIR" -o -name "$PARENT_DIR" \
-                -o -name "$PROBES_DIR" \) -prune \
+             \( -name '.*' -o -name "$NAMES_DIR" -o -name "$APEX_DIR" \
+                -o -name "$PARENT_DIR" -o -name "$PROBES_DIR" \) -prune \
              -o -type d -print 2>/dev/null \
             | sed "s|^$QUERIED_DIR/||" \
             | while read -r subdir; do dir_domain "$subdir"; echo; done
@@ -72,5 +73,6 @@ discover_names() {
     } | sed 's/\.$//' \
       | grep -E "\.$escaped\$" \
       | grep -Ev '[*]|[^A-Za-z0-9_.-]' \
+      | grep -Ev '(^|\.)\.' \
       | LC_ALL=C sort -u
 }
